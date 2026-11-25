@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111827"><title>مذكرتي</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--tx:#f1f5f9;--mut:#94a3b8;--ac:#38bdf8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;min-height:100vh}
+header{position:sticky;top:0;background:var(--bg);padding:14px 14px 8px;z-index:5}
+h1{margin:0 0 10px;font-size:24px}
+#q{width:100%;padding:12px 14px;border-radius:14px;border:0;background:var(--card);color:var(--tx);font-size:16px}
+#tags{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px}
+.chip{padding:6px 14px;border-radius:99px;background:var(--card);color:var(--mut);white-space:nowrap;font-size:14px;border:0}
+.chip.on{background:var(--ac);color:#06283d;font-weight:700}
+#list{padding:8px 14px 100px;columns:2;column-gap:10px}
+.n{break-inside:avoid;margin-bottom:10px;border-radius:16px;padding:12px;color:#1b1b1b;cursor:pointer;position:relative}
+.n b{display:block;margin-bottom:4px;font-size:16px}
+.n p{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow:hidden}
+.n small{display:block;margin-top:8px;opacity:.6;font-size:11px}
+.pin{position:absolute;top:8px;left:10px}
+#fab{position:fixed;bottom:22px;left:22px;width:60px;height:60px;border-radius:50%;border:0;background:var(--ac);color:#06283d;font-size:34px;box-shadow:0 6px 18px #0008}
+#ed{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;padding:14px;gap:10px;z-index:10}
+#ed.show{display:flex}
+#ed input,#ed textarea{border:0;border-radius:14px;padding:12px;font-size:16px;color:#1b1b1b;font-family:inherit}
+#ed textarea{flex:1;resize:none}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:32px;height:32px;border-radius:50%;border:3px solid transparent}
+.dot.on{border-color:#fff}
+.btn{padding:10px 16px;border-radius:12px;border:0;background:var(--card);color:var(--tx);font-size:15px}
+.btn.p{background:var(--ac);color:#06283d;font-weight:700}.btn.d{background:#7f1d1d}
+#empty{text-align:center;color:var(--mut);margin-top:80px;display:none}
+</style></head><body>
+<header><h1>📝 مذكرتي</h1><input id="q" placeholder="ابحث في الملاحظات..."><div id="tags"></div></header>
+<div id="list"></div><div id="empty">لا توجد ملاحظات بعد<br>اضغط + لإضافة أول ملاحظة</div>
+<button id="fab" aria-label="جديد">+</button>
+<div id="ed"><input id="t" placeholder="العنوان"><textarea id="b" placeholder="اكتب ملاحظتك..."></textarea>
+<input id="tg" placeholder="وسم (مثال: عمل، دراسة)"><div class="row" id="cols"></div>
+<div class="row"><button class="btn p" id="save">حفظ</button><button class="btn" id="pn">📌 تثبيت</button><button class="btn" id="cp">نسخ</button><button class="btn d" id="del">حذف</button><button class="btn" id="cl">إلغاء</button></div></div>
+<script>
+const $=i=>document.getElementById(i);
+const COLS=['#fde68a','#fecaca','#bbf7d0','#bfdbfe','#e9d5ff','#fed7aa'];
+let notes=JSON.parse(localStorage.getItem('notes5')||'[]'),cur=null,tag='',ec=COLS[0],ep=false;
+const save=()=>localStorage.setItem('notes5',JSON.stringify(notes));
+function render(){const q=$('q').value.trim().toLowerCase();
+ const tags=[...new Set(notes.map(n=>n.tag).filter(Boolean))];
+ $('tags').innerHTML='';[['','الكل'],...tags.map(t=>[t,t])].forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(tag===v?' on':'');b.textContent=l;b.onclick=()=>{tag=v;render()};$('tags').appendChild(b)});
+ const arr=notes.filter(n=>(!tag||n.tag===tag)&&(!q||(n.t+n.b+n.tag).toLowerCase().includes(q))).sort((a,b)=>(b.pin-a.pin)||(b.u-a.u));
+ $('list').innerHTML='';$('empty').style.display=notes.length?'none':'block';
+ arr.forEach(n=>{const d=document.createElement('div');d.className='n';d.style.background=n.c;d.innerHTML='<b></b><p></p><small></small>'+(n.pin?'<span class="pin">📌</span>':'');
+  d.children[0].textContent=n.t||'بدون عنوان';d.children[1].textContent=n.b;d.children[2].textContent=(n.tag?'#'+n.tag+' · ':'')+new Date(n.u).toLocaleDateString('ar-EG');d.onclick=()=>open(n);$('list').appendChild(d)})}
+function open(n){cur=n;$('t').value=n?n.t:'';$('b').value=n?n.b:'';$('tg').value=n?n.tag:'';ec=n?n.c:COLS[0];ep=n?n.pin:false;$('del').style.display=n?'':'none';cols();$('pn').textContent=ep?'📌 مثبّتة':'📌 تثبيت';$('ed').classList.add('show')}
+function cols(){$('cols').innerHTML='';COLS.forEach(c=>{const d=document.createElement('div');d.className='dot'+(c===ec?' on':'');d.style.background=c;d.onclick=()=>{ec=c;cols()};$('cols').appendChild(d)})}
+$('fab').onclick=()=>open(null);$('q').oninput=render;$('cl').onclick=()=>$('ed').classList.remove('show');
+$('pn').onclick=()=>{ep=!ep;$('pn').textContent=ep?'📌 مثبّتة':'📌 تثبيت'};
+$('cp').onclick=()=>{const s=$('t').value+'\n'+$('b').value;navigator.clipboard&&navigator.clipboard.writeText(s).then(()=>{$('cp').textContent='تم ✓'},()=>{})};
+$('save').onclick=()=>{const o={t:$('t').value.trim(),b:$('b').value,tag:$('tg').value.trim().replace(/^#/,''),c:ec,pin:ep,u:Date.now()};if(!o.t&&!o.b.trim()){$('ed').classList.remove('show');return}
+ if(cur)Object.assign(cur,o);else notes.push(Object.assign({id:Date.now()},o));save();$('ed').classList.remove('show');$('cp').textContent='نسخ';render()};
+$('del').onclick=()=>{if(confirm('حذف هذه الملاحظة؟')){notes=notes.filter(n=>n!==cur);save();$('ed').classList.remove('show');render()}};
+render();
+</script></body></html>
