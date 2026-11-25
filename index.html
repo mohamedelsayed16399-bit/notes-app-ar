@@ -26,25 +26,33 @@ h1{margin:0 0 10px;font-size:24px}
 .btn{padding:10px 16px;border-radius:12px;border:0;background:var(--card);color:var(--tx);font-size:15px}
 .btn.p{background:var(--ac);color:#06283d;font-weight:700}.btn.d{background:#7f1d1d}
 #empty{text-align:center;color:var(--mut);margin-top:80px;display:none}
+body.light{--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--mut:#64748b;--ac:#0284c7}
+body.light .chip.on,body.light .btn.p,body.light #fab{color:#fff}
+.tb{display:flex;gap:6px;margin-top:8px}.tb button{flex:1;padding:8px 0;border-radius:12px;border:0;background:var(--card);color:var(--tx);font-size:16px}
+.ck{display:flex;gap:6px;align-items:flex-start;margin:3px 0;font-size:14px}.ck i{font-style:normal;font-size:18px;line-height:1;flex:none}.ck.d span{text-decoration:line-through;opacity:.55}
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:14px;z-index:30;display:none;gap:14px;align-items:center;box-shadow:0 6px 20px #0008}#toast button{background:none;border:0;color:#38bdf8;font-weight:800;font-size:15px}
+#trash{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;padding:14px;gap:10px;z-index:12;overflow:auto}#trash.show{display:flex}
+.tr{background:var(--card);border-radius:14px;padding:12px;display:flex;gap:8px;align-items:center}.tr div{flex:1;min-width:0}.tr small{color:var(--mut)}.tr button{padding:8px 12px;border-radius:10px;border:0;background:var(--ac);color:#06283d;font-weight:700}.tr button.x{background:#7f1d1d;color:#fff}
+#cnt{color:var(--mut);font-size:13px}
 </style></head><body>
-<header><h1>📝 مذكرتي</h1><input id="q" placeholder="ابحث في الملاحظات..."><div id="tags"></div></header>
-<div id="list"></div><div id="empty">لا توجد ملاحظات بعد<br>اضغط + لإضافة أول ملاحظة</div>
+<header><h1>📝 مذكرتي</h1><input id="q" placeholder="ابحث في الملاحظات..."><div id="tags"></div><div class="tb"><button id="thm" title="الوضع">🌓</button><button id="trb" title="المحذوفات">🗑</button><button id="exp" title="نسخة احتياطية">⬇</button><button id="imp" title="استرجاع نسخة">⬆</button></div><input type="file" id="fi" accept=".json" hidden></header>
+<div id="list"></div><div id="toast"></div><div id="trash"></div><div id="empty">لا توجد ملاحظات بعد<br>اضغط + لإضافة أول ملاحظة</div>
 <button id="fab" aria-label="جديد">+</button>
 <div id="ed"><input id="t" placeholder="العنوان"><textarea id="b" placeholder="اكتب ملاحظتك..."></textarea>
-<input id="tg" placeholder="وسم (مثال: عمل، دراسة)"><div class="row" id="cols"></div>
-<div class="row"><button class="btn p" id="save">حفظ</button><button class="btn" id="pn">📌 تثبيت</button><button class="btn" id="cp">نسخ</button><button class="btn d" id="del">حذف</button><button class="btn" id="cl">إلغاء</button></div></div>
+<input id="tg" placeholder="وسم (مثال: عمل، دراسة)"><div class="row" id="cols"></div><div id="cnt"></div>
+<div class="row"><button class="btn" id="ckb">☑ قائمة</button><button class="btn" id="mic">🎤</button><button class="btn p" id="save">حفظ</button><button class="btn" id="pn">📌 تثبيت</button><button class="btn" id="cp">نسخ</button><button class="btn d" id="del">حذف</button><button class="btn" id="cl">إلغاء</button></div></div>
 <script>
 const $=i=>document.getElementById(i);
 const COLS=['#fde68a','#fecaca','#bbf7d0','#bfdbfe','#e9d5ff','#fed7aa'];
 let notes=JSON.parse(localStorage.getItem('notes5')||'[]'),cur=null,tag='',ec=COLS[0],ep=false;
 const save=()=>localStorage.setItem('notes5',JSON.stringify(notes));
 function render(){const q=$('q').value.trim().toLowerCase();
- const tags=[...new Set(notes.map(n=>n.tag).filter(Boolean))];
+ const tags=[...new Set(notes.filter(n=>!n.del).map(n=>n.tag).filter(Boolean))];
  $('tags').innerHTML='';[['','الكل'],...tags.map(t=>[t,t])].forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(tag===v?' on':'');b.textContent=l;b.onclick=()=>{tag=v;render()};$('tags').appendChild(b)});
- const arr=notes.filter(n=>(!tag||n.tag===tag)&&(!q||(n.t+n.b+n.tag).toLowerCase().includes(q))).sort((a,b)=>(b.pin-a.pin)||(b.u-a.u));
- $('list').innerHTML='';$('empty').style.display=notes.length?'none':'block';
+ const arr=notes.filter(n=>!n.del&&(!tag||n.tag===tag)&&(!q||(n.t+n.b+n.tag).toLowerCase().includes(q))).sort((a,b)=>(b.pin-a.pin)||(b.u-a.u));
+ $('list').innerHTML='';$('empty').style.display=notes.some(n=>!n.del)?'none':'block';
  arr.forEach(n=>{const d=document.createElement('div');d.className='n';d.style.background=n.c;d.innerHTML='<b></b><p></p><small></small>'+(n.pin?'<span class="pin">📌</span>':'');
-  d.children[0].textContent=n.t||'بدون عنوان';d.children[1].textContent=n.b;d.children[2].textContent=(n.tag?'#'+n.tag+' · ':'')+new Date(n.u).toLocaleDateString('ar-EG');d.onclick=()=>open(n);$('list').appendChild(d)})}
+  d.children[0].textContent=n.t||'بدون عنوان';fillBody(d.children[1],n);d.children[2].textContent=(n.tag?'#'+n.tag+' · ':'')+new Date(n.u).toLocaleDateString('ar-EG');d.onclick=()=>open(n);$('list').appendChild(d)})}
 function open(n){cur=n;$('t').value=n?n.t:'';$('b').value=n?n.b:'';$('tg').value=n?n.tag:'';ec=n?n.c:COLS[0];ep=n?n.pin:false;$('del').style.display=n?'':'none';cols();$('pn').textContent=ep?'📌 مثبّتة':'📌 تثبيت';$('ed').classList.add('show')}
 function cols(){$('cols').innerHTML='';COLS.forEach(c=>{const d=document.createElement('div');d.className='dot'+(c===ec?' on':'');d.style.background=c;d.onclick=()=>{ec=c;cols()};$('cols').appendChild(d)})}
 $('fab').onclick=()=>open(null);$('q').oninput=render;$('cl').onclick=()=>$('ed').classList.remove('show');
@@ -52,6 +60,40 @@ $('pn').onclick=()=>{ep=!ep;$('pn').textContent=ep?'📌 مثبّتة':'📌 ت�
 $('cp').onclick=()=>{const s=$('t').value+'\n'+$('b').value;navigator.clipboard&&navigator.clipboard.writeText(s).then(()=>{$('cp').textContent='تم ✓'},()=>{})};
 $('save').onclick=()=>{const o={t:$('t').value.trim(),b:$('b').value,tag:$('tg').value.trim().replace(/^#/,''),c:ec,pin:ep,u:Date.now()};if(!o.t&&!o.b.trim()){$('ed').classList.remove('show');return}
  if(cur)Object.assign(cur,o);else notes.push(Object.assign({id:Date.now()},o));save();$('ed').classList.remove('show');$('cp').textContent='نسخ';render()};
-$('del').onclick=()=>{if(confirm('حذف هذه الملاحظة؟')){notes=notes.filter(n=>n!==cur);save();$('ed').classList.remove('show');render()}};
+$('del').onclick=()=>{const n=cur;n.del=Date.now();save();$('ed').classList.remove('show');render();toast('اتنقلت لسلة المحذوفات',()=>{delete n.del;save();render()})};
+
+/* ---- upgrades: checklists, trash+undo, backup, dark/light, dictation ---- */
+const CK=/^(\s*)\[( |x|X)\]\s?(.*)$/;
+function fillBody(p,n){p.textContent='';p.style.whiteSpace='normal';const L=n.b.split('\n');let shown=0;
+ L.forEach((ln,i)=>{const m=ln.match(CK);if(m){const d=document.createElement('div');const dn=m[2]!=' ';d.className='ck'+(dn?' d':'');const b=document.createElement('i');b.textContent=dn?'☑':'☐';const sp=document.createElement('span');sp.textContent=m[3];d.append(b,sp);
+   b.onclick=e=>{e.stopPropagation();L[i]=m[1]+(dn?'[ ] ':'[x] ')+m[3];n.b=L.join('\n');save();render()};p.appendChild(d)}else if(ln.trim()){const d=document.createElement('div');d.style.cssText='white-space:pre-wrap;margin:2px 0';d.textContent=ln;p.appendChild(d)}});
+ const c=L.filter(l=>CK.test(l));if(c.length){const dn=c.filter(l=>/\[[xX]\]/.test(l)).length;const s=document.createElement('small');s.textContent=dn+' / '+c.length+' ✓';s.style.cssText='display:block;margin-top:4px;font-weight:700';p.appendChild(s)}}
+let tt;function toast(m,undo){const t=$('toast');t.innerHTML='';const s=document.createElement('span');s.textContent=m;t.appendChild(s);if(undo){const b=document.createElement('button');b.textContent='تراجع';b.onclick=()=>{undo();t.style.display='none'};t.appendChild(b)}t.style.display='flex';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',5000)}
+$('ckb').onclick=()=>{const b=$('b');const v=b.value,p=b.selectionStart;const ls=v.lastIndexOf('\n',p-1)+1;b.value=v.slice(0,ls)+'[ ] '+v.slice(ls);b.focus();b.selectionStart=b.selectionEnd=p+4;cnt()};
+$('b').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const b=$('b'),v=b.value,p=b.selectionStart,ls=v.lastIndexOf('\n',p-1)+1,ln=v.slice(ls,p),m=ln.match(CK);if(!m)return;e.preventDefault();if(!m[3].trim()){b.value=v.slice(0,ls)+v.slice(p);b.selectionStart=b.selectionEnd=ls}else{const ins='\n'+m[1]+'[ ] ';b.value=v.slice(0,p)+ins+v.slice(p);b.selectionStart=b.selectionEnd=p+ins.length}cnt()});
+function cnt(){const v=$('b').value.trim();$('cnt').textContent=(v?v.split(/\s+/).length:0)+' كلمة · '+v.length+' حرف'}
+$('b').addEventListener('input',cnt);const _open=open;open=function(n){_open(n);cnt()};
+// trash
+function purge(){const lim=Date.now()-30*864e5;const l=notes.length;notes=notes.filter(n=>!n.del||n.del>lim);if(notes.length!=l)save()}purge();
+function showTrash(){const T=$('trash');const d=notes.filter(n=>n.del).sort((a,b)=>b.del-a.del);T.innerHTML='';const h=document.createElement('div');h.className='row';h.innerHTML='<h2 style="margin:0;flex:1">🗑 المحذوفات</h2>';const bk=document.createElement('button');bk.className='btn';bk.textContent='رجوع';bk.onclick=()=>T.classList.remove('show');h.appendChild(bk);T.appendChild(h);
+ const info=document.createElement('small');info.style.color='var(--mut)';info.textContent='بتتمسح لوحدها بعد ٣٠ يوم';T.appendChild(info);
+ if(!d.length){const e=document.createElement('div');e.style.cssText='text-align:center;color:var(--mut);margin-top:60px';e.textContent='السلة فاضية';T.appendChild(e)}
+ d.forEach(n=>{const r=document.createElement('div');r.className='tr';const x=document.createElement('div');const b=document.createElement('b');b.textContent=n.t||(n.b||'').slice(0,30)||'بدون عنوان';const sm=document.createElement('small');sm.textContent=' اتحذفت '+new Date(n.del).toLocaleDateString('ar-EG');x.append(b,document.createElement('br'),sm);
+  const rs=document.createElement('button');rs.textContent='استرجاع';rs.onclick=()=>{delete n.del;save();render();showTrash()};const fd=document.createElement('button');fd.className='x';fd.textContent='✕';fd.onclick=()=>{if(confirm('تمسحها نهائي؟')){notes=notes.filter(z=>z!==n);save();showTrash()}};r.append(x,rs,fd);T.appendChild(r)});
+ if(d.length){const e=document.createElement('button');e.className='btn d';e.textContent='فضّي السلة';e.onclick=()=>{if(confirm('تمسح كل المحذوفات نهائي؟')){notes=notes.filter(n=>!n.del);save();showTrash()}};T.appendChild(e)}
+ T.classList.add('show')}
+$('trb').onclick=showTrash;
+// theme
+function theme(l){document.body.classList.toggle('light',l);document.querySelector('meta[name=theme-color]').content=l?'#f1f5f9':'#111827'}
+try{theme(localStorage.getItem('notesTheme')==='l')}catch(e){}
+$('thm').onclick=()=>{const l=!document.body.classList.contains('light');theme(l);try{localStorage.setItem('notesTheme',l?'l':'d')}catch(e){}};
+// backup
+$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({v:5,notes:notes.filter(n=>!n.del)})],{type:'application/json'}));a.download='notes-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();toast('اتحفظت نسخة احتياطية')};
+$('imp').onclick=()=>$('fi').click();
+$('fi').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result),a=Array.isArray(o)?o:o.notes;if(!Array.isArray(a))throw 0;let c=0;a.forEach(x=>{if(x&&(x.t||x.b)&&!notes.some(n=>n.id===x.id&&n.b===x.b)){notes.push(Object.assign({},x,{id:x.id||Date.now()+c}));c++}});save();render();toast('اتضاف '+c+' ملاحظة')}catch(_){toast('الملف مش صالح')}};r.readAsText(f);e.target.value=''};
+// voice
+{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rc=null;if(!SR)$('mic').style.display='none';else $('mic').onclick=()=>{if(rc){rc.stop();return}rc=new SR();rc.lang='ar-EG';rc.interimResults=false;rc.continuous=true;$('mic').textContent='⏹';rc.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript+' ';const b=$('b');b.value+=(b.value&&!/\s$/.test(b.value)?' ':'')+t.trim();cnt()};rc.onend=()=>{rc=null;$('mic').textContent='🎤'};rc.onerror=()=>{};try{rc.start()}catch(e){rc=null;$('mic').textContent='🎤'}}}
+window.NT={notes:()=>notes,showTrash,fillBody};
 render();
 </script></body></html>
+
